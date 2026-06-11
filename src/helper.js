@@ -1,3 +1,4 @@
+// Checks if the current move results in a win.
 export const IsWinner = (gameBoard, currentMove, currentPlayer) => {
   let boar = [...gameBoard];
   boar[currentMove] = currentPlayer;
@@ -6,17 +7,17 @@ export const IsWinner = (gameBoard, currentMove, currentPlayer) => {
     [0, 1, 2, 3],
     [4, 5, 6, 7],
     [8, 9, 10, 11],
-    [12, 13, 14, 15],
+    [12, 13, 14, 15], // Horizontals
     [0, 4, 8, 12],
     [1, 5, 9, 13],
     [2, 6, 10, 14],
-    [3, 7, 11, 15],
-    [0, 5, 10, 16],
-    [3, 6, 9, 12],
+    [3, 7, 11, 15], // Verticals
+    [0, 5, 10, 15],
+    [3, 6, 9, 12], // Diagonals
   ];
+
   for (let i = 0; i < winLines.length; i++) {
     const [c1, c2, c3, c4] = winLines[i];
-
     if (
       boar[c1] > 0 &&
       boar[c1] === boar[c2] &&
@@ -28,85 +29,98 @@ export const IsWinner = (gameBoard, currentMove, currentPlayer) => {
   }
   return false;
 };
+
+// Checks if the game has ended in a draw.
 export const isDraw = (gameBoard, currentMove, currentPlayer) => {
   let boar = [...gameBoard];
   boar[currentMove] = currentPlayer;
-
-  let count = boar.reduce((n, x) => n + (x === 0), 0);
-  // console.log(count);
-  return count === 0;
+  return boar.reduce((n, x) => n + (x === 0), 0) === 0;
 };
 
-const getRandomComputerMove = (gameBoard) => {
-  let validMoves = [];
-  for (let i = 0; i < gameBoard.length; i++) {
-    if (gameBoard[i] === 0) {
-      validMoves.push(i);
-    }
-  }
-  let rndMove = Math.floor(Math.random() * validMoves.length);
-  return validMoves[rndMove];
-};
-
-const getPosition = (gameBoard, moveChecks) => {
-  for (let check = 0; check < moveChecks.length; check++) {
-    for (let i = 0; i < moveChecks[check].max; i += moveChecks[check].step) {
-      let series =
-        gameBoard[i + moveChecks[check].indexes[0]].toString() +
-        gameBoard[i + moveChecks[check].indexes[1]].toString() +
-        gameBoard[i + moveChecks[check].indexes[2]].toString() +
-        gameBoard[i + moveChecks[check].indexes[3]].toString();
-
-      switch (series) {
-        case "1110":
-        case "2220":
-          return i + moveChecks[check].indexes[3];
-        case "1101":
-        case "2202":
-          return i + moveChecks[check].indexes[2];
-        case "1011":
-        case "2022":
-          return i + moveChecks[check].indexes[1];
-        case "0111":
-        case "0222":
-          return i + moveChecks[check].indexes[0];
-        default:
-      }
-    }
-  }
-  return -1;
-};
-export const getComputerMove = (gameBoard) => {
-  let moveChecks = [
-    //vertical
-    {
-      indexes: [0, 4, 8, 12],
-      max: 4,
-      step: 1,
-    },
-    //horizontal
-    {
-      indexes: [0, 1, 2, 3],
-      max: 16,
-      step: 4,
-    },
-    //diagonal
-    {
-      indexes: [0, 5, 10, 15],
-      max: 16,
-      step: 16,
-    },
-    //diagonal 2
-    {
-      indexes: [1, 6, 9, 12],
-      max: 16,
-      step: 16,
-    },
+// Master AI Engine: Evaluates every empty square dynamically to pick the move
+// that either wins, prevents a loss, or builds an offensive trap (fork).
+export const getComputerMove = (
+  gameBoard,
+  computerPlayer = 2,
+  humanPlayer = 1,
+) => {
+  const winLines = [
+    [0, 1, 2, 3],
+    [4, 5, 6, 7],
+    [8, 9, 10, 11],
+    [12, 13, 14, 15],
+    [0, 4, 8, 12],
+    [1, 5, 9, 13],
+    [2, 6, 10, 14],
+    [3, 7, 11, 15],
+    [0, 5, 10, 15],
+    [3, 6, 9, 12],
   ];
 
-  let position = getPosition(gameBoard, moveChecks);
-  if (position > -1) {
-    return position;
+  // Base positional weights to favor the center/corners if tactical scores tie
+  const positionalWeights = [3, 1, 1, 3, 1, 4, 4, 1, 1, 4, 4, 1, 3, 1, 1, 3];
+
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  // 1. Loop through every single cell on the board
+  for (let cell = 0; cell < 16; cell++) {
+    if (gameBoard[cell] !== 0) continue; // Skip filled slots
+
+    let tacticalScore = 0;
+
+    // 2. Simulate what happens if a player takes this cell
+    for (let line of winLines) {
+      if (!line.includes(cell)) continue;
+
+      // Extract the state of the other 3 spaces in this specific line
+      const lineValues = line.map((idx) =>
+        idx === cell ? "M" : gameBoard[idx],
+      );
+      const computerCount = lineValues.filter(
+        (v) => v === computerPlayer,
+      ).length;
+      const humanCount = lineValues.filter((v) => v === humanPlayer).length;
+      const emptyCount = lineValues.filter((v) => v === 0).length;
+
+      // --- OFFENSIVE LOGIC (Computer) ---
+      if (computerCount === 3) {
+        // Instantly Win
+        tacticalScore += 10000;
+      } else if (computerCount === 2 && emptyCount === 1) {
+        // Creates an unblocked 3-in-a-row (Forced Trap)
+        tacticalScore += 100;
+      } else if (computerCount === 1 && emptyCount === 2) {
+        // Sets up future 3-in-a-rows
+        tacticalScore += 15;
+      } else if (emptyCount === 3) {
+        // Plants a seed in an open row
+        tacticalScore += 2;
+      }
+
+      // --- DEFENSIVE LOGIC (Human) ---
+      if (humanCount === 3) {
+        // Critical Block (Stop human from winning)
+        tacticalScore += 1000;
+      } else if (humanCount === 2 && emptyCount === 1) {
+        // Soft Block (Stop human from building a 3-in-a-row trap)
+        tacticalScore += 40;
+      }
+    }
+
+    // Add positional weight so AI prefers centers/corners during opening turns
+    tacticalScore += positionalWeights[cell];
+
+    // 3. Track the absolute best-performing cell configurations
+    if (tacticalScore > bestScore) {
+      bestScore = tacticalScore;
+      bestMoves = [cell];
+    } else if (tacticalScore === bestScore) {
+      bestMoves.push(cell);
+    }
   }
-  return getRandomComputerMove(gameBoard);
+
+  // Pick randomly from the tied highest scoring strategic moves
+  const finalChoice = Math.floor(Math.random() * bestMoves.length);
+  return bestMoves[finalChoice];
 };

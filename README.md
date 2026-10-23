@@ -46,7 +46,7 @@ This is a fully functional, interactive Tic-Tac-Toe game built with React, featu
 
 ![Game Preview](Preview_1.png)
 
-**Live Demo:** [https://abrahamsanchezdev.github.io/react-tutorials/](https://abrahamsanchezdev.github.io/react-tutorials/)
+**Live Demo:** [https://abrahamsanchezdev.github.io/react-4x4-tic_tac_toe/](https://abrahamsanchezdev.github.io/react-4x4-tic_tac_toe/)
 
 ---
 
@@ -161,4 +161,4 @@ The project is deployed to GitHub Pages via the `npm run deploy` command, which 
 ## 👤 Author
 
 [Abraham Sanchez](https://github.com/abrahamsanchezdev)  
-GitHub: [react-tutorials Repository](https://github.com/abrahamsanchezdev/react-tutorials)
+GitHub: [react-4x4-tic_tac_toe Repository](https://github.com/AbrahamSanchezDev/react-4x4-tic_tac_toe)
